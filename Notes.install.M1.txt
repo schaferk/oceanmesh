@@ -1,0 +1,73 @@
+conda create -n oceanmesh python=3.10 -y
+conda activate oceanmesh
+conda install -c conda-forge cgal
+conda install -c conda-forge cmake
+
+cd oceanmesh
+conda install -c conda-forge proj
+export PROJ_DIR=/Users/schaferk/miniconda3/envs/oceanmesh
+export GDAL_CONFIG=$(which gdal-config)
+conda install -c conda-forge gmp mpfr
+export LIBRARY_PATH=/opt/homebrew/lib
+export CPATH=/opt/homebrew/include
+pip install numpy==1.21
+pip install -U versioneer
+versioneer install
+git add oceanmesh/_version.py
+git add oceanmesh/_version.py
+git commit -m "Add versioneer generated _version.py"
+conda install -c conda-forge gmp mpfr
+
+conda update -n base -c conda-forge conda
+
+#pip install -U -e .
+#pip install -U -e . --no-build-isolation
+pip install -U .
+
+
+python -c "import oceanmesh; print(oceanmesh.__version__)"
+python -c "import xarray; print(xarray.__version__)"
+ python -c "import oceanmesh; print(oceanmesh.__version__)"
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/Users/schaferk/MDLOPS/repos/oceanmesh/oceanmesh/__init__.py", line 21, in <module>
+    from oceanmesh.edgefx import (
+  File "/Users/schaferk/MDLOPS/repos/oceanmesh/oceanmesh/edgefx.py", line 11, in <module>
+    from inpoly import inpoly2
+  File "/Users/schaferk/miniconda3/envs/oceanmesh/lib/python3.10/site-packages/inpoly/__init__.py", line 2, in <module>
+    from inpoly.inpoly2 import inpoly2
+  File "/Users/schaferk/miniconda3/envs/oceanmesh/lib/python3.10/site-packages/inpoly/inpoly2.py", line 218, in <module>
+    from inpoly.inpoly_ import _inpoly  # noqa
+  File "inpoly/inpoly_.pyx", line 2, in init inpoly.inpoly_
+ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+
+pip install numpy==1.26.4
+pip uninstall oceanmesh inpoly
+pip install -U .
+
+
+conda install requests
+
+python -c "import oceanmesh; print(oceanmesh.__version__)"
+0+untagged.41.g143d97f.dirty
+
+TEST:
+python
+EPSG = 32619  # A Python int, dict, or str containing the CRS information (in this case UTM19N)
+bbox = (
+    -70.29637,
+    -43.56508,
+    -69.65537,
+    43.88338,
+)  # the extent of the domain (can also be a multi-polygon delimited by rows of np.nan)
+extent = om.Region(
+    extent=bbox, crs=4326
+)  # set the region (the bbox is given here in EPSG:4326 or WGS84)
+extent = extent.transform_to(EPSG)  # Now I transform to the desired EPSG (UTM19N)
+print(
+    extent.bbox
+)  # now the extents are in the desired CRS and can be passed to various functions later on
+
+
+#to delete:
+conda env remove --name ENV_NAME
