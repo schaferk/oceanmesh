@@ -7,6 +7,8 @@ import zipfile
 import requests
 import oceanmesh as om
 
+import os
+
 EPSG = 32619  # A Python int, dict, or str containing the CRS information (in this case UTM19N)
 bbox = (
     -70.29637,
@@ -14,6 +16,7 @@ bbox = (
     -69.65537,
     43.88338,
 )  # the extent of the domain (can also be a multi-polygon delimited by rows of np.nan)
+
 extent = om.Region(
     extent=bbox, crs=4326
 )  # set the region (the bbox is given here in EPSG:4326 or WGS84)
@@ -26,14 +29,24 @@ print(
 # Download and load the GSHHS shoreline
 url = "http://www.soest.hawaii.edu/pwessel/gshhg/gshhg-shp-2.3.7.zip"
 filename = url.split("/")[-1]
-with open(filename, "wb") as f:
-    r = requests.get(url)
-    f.write(r.content)
+# Check if the file already exists before downloading
+if not os.path.exists(filename):
+    with open(filename, "wb") as f:
+        r = requests.get(url)
+        f.write(r.content)
+else:
+    print(f"{filename} already exists, skipping download.")
 
-with zipfile.ZipFile("gshhg-shp-2.3.7.zip", "r") as zip_ref:
-    zip_ref.extractall("gshhg-shp-2.3.7")
+# Extract if the directory does not already exist
+extract_dir = "gshhg-shp-2.3.7"
+if not os.path.exists(extract_dir):
+    with zipfile.ZipFile(filename, "r") as zip_ref:
+        zip_ref.extractall(extract_dir)
+else:
+    print(f"{extract_dir} already exists, skipping extraction.")
 
 fname = "gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp"
+
 EPSG = 4326  # EPSG code for WGS84 which is what you want to mesh in
 # Specify and extent to read in and a minimum mesh size in the unit of the projection
 extent = om.Region(extent=(-75.000, -70.001, 40.0001, 41.9000), crs=EPSG)
