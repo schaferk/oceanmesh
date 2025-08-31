@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
+import time
 import meshio
 import oceanmesh as om
 print(om.__version__)
+
+start_time = time.perf_counter()  # Start timing
 
 fname = "gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp"
 
@@ -37,3 +40,6 @@ meshio.write_points_cells(
     file_format="vtk",
 )
 
+end_time = time.perf_counter()  # End timing
+
+print(f"Script execution time: {end_time - start_time:.2f} seconds")
