@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
+import time
 import meshio
 import oceanmesh as om
+
+start_time = time.perf_counter()  # Start timing
+
 print(om.__version__)
 
 fname = "gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp"
@@ -15,6 +19,9 @@ fname = "gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp"
 #     "+step +proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
 
 EPSG = 4326  # EPSG:4326 otherwise known as WGS84
+region_name='alaska'
+output_filename = f"{region_name}_epsg{EPSG}.vtk"
+
 extent = om.Region(extent=(-138.00, -129.001, 53.510001, 56.9000), crs=EPSG)
 min_edge_length = 0.01  # minimum mesh size in domain in projection
 
@@ -39,9 +46,12 @@ points, cells = om.laplacian2(points, cells)
 
 # write the mesh with meshio
 meshio.write_points_cells(
-    "new_york.vtk",
+    output_filename,
     points,
     [("triangle", cells)],
     file_format="vtk",
 )
 
+end_time = time.perf_counter()  # End timing
+
+print(f"Script execution time: {end_time - start_time:.2f} seconds")
