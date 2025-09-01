@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
 import oceanmesh; 
-print(oceanmesh.__version__)
-
 import zipfile
 import requests
 import oceanmesh as om
-
 import os
+
+print(oceanmesh.__version__)
 
 EPSG = 32619  # A Python int, dict, or str containing the CRS information (in this case UTM19N)
 bbox = (
@@ -24,7 +23,6 @@ extent = extent.transform_to(EPSG)  # Now I transform to the desired EPSG (UTM19
 print(
     extent.bbox
 )  # now the extents are in the desired CRS and can be passed to various functions later on
-
 
 # Download and load the GSHHS shoreline
 url = "http://www.soest.hawaii.edu/pwessel/gshhg/gshhg-shp-2.3.7.zip"
