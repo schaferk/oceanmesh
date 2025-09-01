@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
+import time
 import oceanmesh as om
 import zipfile
 import requests
 import os
+
+start_time = time.perf_counter()  # Start timing
 
 print(om.__version__)
 
@@ -67,4 +70,8 @@ shoreline.plot(
 
 # Create signed distance function for meshing
 sdf = om.signed_distance_function(shoreline)
+
+end_time = time.perf_counter()  # End timing
+
+print(f"Script execution time: {end_time - start_time:.2f} seconds")
 
