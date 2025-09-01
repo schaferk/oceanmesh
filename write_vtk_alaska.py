@@ -10,14 +10,6 @@ print(om.__version__)
 
 fname = "gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp"
 
-#EPSG:4326 is a global latitude-longitude system suitable for Alaska
-#EPSG:3572 (WGS 84 / North Pole LAEA Alaska) 
-#EPSG:3338 (Alaska Albers) 
-#  proj.f90
-#  character(len=*), public, parameter :: proj_def = &
-#     "+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad " // &
-#     "+step +proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
-
 EPSG = 4326  # EPSG:4326 otherwise known as WGS84
 region_name='alaska'
 output_filename = f"{region_name}_epsg{EPSG}.vtk"
