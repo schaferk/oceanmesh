@@ -3,13 +3,17 @@
 import time
 import meshio
 import oceanmesh as om
-print(om.__version__)
 
 start_time = time.perf_counter()  # Start timing
+
+print(om.__version__)
 
 fname = "gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp"
 
 EPSG = 4326  # EPSG:4326 otherwise known as WGS84
+region_name='new_york'
+output_filename = f"{region_name}_epsg{EPSG}.vtk"
+
 extent = om.Region(extent=(-75.00, -70.001, 40.0001, 41.9000), crs=EPSG)
 min_edge_length = 0.01  # minimum mesh size in domain in projection
 
@@ -34,7 +38,7 @@ points, cells = om.laplacian2(points, cells)
 
 # write the mesh with meshio
 meshio.write_points_cells(
-    "new_york.vtk",
+    output_filename,
     points,
     [("triangle", cells)],
     file_format="vtk",
