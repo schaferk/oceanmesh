@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
+import sys
 import time
 import meshio
 import oceanmesh as om
+
+from mesh_io import write_node_file, write_ele_file
 
 start_time = time.perf_counter()  # Start timing
 
@@ -42,6 +45,13 @@ domain = om.signed_distance_function(shore)
 # Generate mesh points and cells
 points, cells = om.generate_mesh(domain, edge_length)
 
+print("Shape of points:", points.shape)
+# Print the first 5 entries
+#print("First few points:\n", points[:5])
+
+print("Shape of cells:", cells.shape)
+#print("First few cells:\n", cells[:5])
+#sys.exit()
 # Clean and smooth mesh
 # 1. vertices of each triangle are arranged in counterclockwise order;
 #    Notes: fix_mesh is not defined
@@ -70,6 +80,12 @@ meshio.write_points_cells(
     [("triangle", cells)],
     file_format="vtk",
 )
+
+print("Shape of points:", points.shape)
+print("Shape of cells:", cells.shape)
+
+write_node_file(points,region_name)
+write_ele_file(cells,region_name)
 
 end_time = time.perf_counter()  # End timing
 
