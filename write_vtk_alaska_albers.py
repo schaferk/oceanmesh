@@ -43,9 +43,24 @@ domain = om.signed_distance_function(shore)
 points, cells = om.generate_mesh(domain, edge_length)
 
 # Clean and smooth mesh
+# 1. vertices of each triangle are arranged in counterclockwise order;
+#    Notes: fix_mesh is not defined
+#points, cells = fix_mesh(points, cells)
+
+# 2. conformity (a triangle is not allowed to have a vertex of another triangle in its interior);
+# 3. traversability (the number of boundary segments is equal to the number of boundary vertices,
+#      which guarantees a unique path along the mesh boundary).
+# Remove degenerate mesh faces and other common problems in the mesh
 points, cells = om.make_mesh_boundaries_traversable(points, cells)
+
+# Remove elements (i.e., "faces") connected to only one channel
+# These typically occur in channels at or near the grid scale.
 points, cells = om.delete_faces_connected_to_one_face(points, cells)
+
+# Remove low quality boundary elements less than min_qual
 points, cells = om.delete_boundary_faces(points, cells, min_qual=0.15)
+
+# Apply a Laplacian smoother that preserves the element density
 points, cells = om.laplacian2(points, cells)
 
 # Write mesh to VTK file
