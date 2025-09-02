@@ -9,6 +9,8 @@ from mesh_io import write_node_file, write_ele_file
 
 start_time = time.perf_counter()  # Start timing
 
+verbose = True
+
 print(om.__version__)
 
 fname = "gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp"
@@ -52,6 +54,7 @@ print("Shape of points:", points.shape)
 print("Shape of cells:", cells.shape)
 #print("First few cells:\n", cells[:5])
 #sys.exit()
+
 # Clean and smooth mesh
 # 1. vertices of each triangle are arranged in counterclockwise order;
 #    Notes: fix_mesh is not defined
@@ -60,18 +63,31 @@ print("Shape of cells:", cells.shape)
 # 2. conformity (a triangle is not allowed to have a vertex of another triangle in its interior);
 # 3. traversability (the number of boundary segments is equal to the number of boundary vertices,
 #      which guarantees a unique path along the mesh boundary).
-# Remove degenerate mesh faces and other common problems in the mesh
 points, cells = om.make_mesh_boundaries_traversable(points, cells)
+if verbose:
+    print("# Remove degenerate mesh faces and other common problems in the mesh.")
+    print("Shape of points:", points.shape)
+    print("Shape of  cells:", cells.shape)
 
 # Remove elements (i.e., "faces") connected to only one channel
 # These typically occur in channels at or near the grid scale.
 points, cells = om.delete_faces_connected_to_one_face(points, cells)
+if verbose:
+    print("Remove elements (i.e., 'faces') connected to only one channel")
+    print("Shape of points:", points.shape)
+    print("Shape of  cells:", cells.shape)
 
-# Remove low quality boundary elements less than min_qual
 points, cells = om.delete_boundary_faces(points, cells, min_qual=0.15)
+if verbose:
+    print("# Remove low quality boundary elements less than min_qual")
+    print("Shape of points:", points.shape)
+    print("Shape of  cells:", cells.shape)
 
-# Apply a Laplacian smoother that preserves the element density
 points, cells = om.laplacian2(points, cells)
+if verbose:
+    print("# Apply a Laplacian smoother that preserves the element density")
+    print("Shape of points:", points.shape)
+    print("Shape of  cells:", cells.shape)
 
 # Write mesh to VTK file
 meshio.write_points_cells(
@@ -80,9 +96,6 @@ meshio.write_points_cells(
     [("triangle", cells)],
     file_format="vtk",
 )
-
-print("Shape of points:", points.shape)
-print("Shape of cells:", cells.shape)
 
 write_node_file(points,region_name)
 write_ele_file(cells,region_name)
