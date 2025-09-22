@@ -5,30 +5,39 @@ import oceanmesh as om
 import zipfile
 import requests
 import os
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
 
 start_time = time.perf_counter()  # Start timing
 
 print(om.__version__)
 
 # Alaska region in WGS84 coordinates (lon/lat)
-bbox_wgs84 = (-138.0, -129.0, 53.0, 57.0)  # xmin, xmax, ymin, ymax
 bbox_wgs84 = (-142.0, -127.0, 51.0, 58.0)  # xmin, xmax, ymin, ymax
-#bbox_wgs84 = (-134.0, -130.0, 54.0, 56.0)  # xmin, xmax, ymin, ymax
+bbox_wgs84 = (-140.0, -127.0, 51.0, 58.0)
+#bbox_wgs84 = (-134.0, -130.0, 54.0, 56.0)  # xmin, xmax, ymin, ymax  alaska_albers2; shows up in projection no coastlines.
+
+# Plot original area in WGS84 with coastlines using Cartopy
+fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(projection=ccrs.PlateCarree()))
+
+ax.set_extent(bbox_wgs84, crs=ccrs.PlateCarree())
+ax.coastlines(resolution='10m', color='blue', linewidth=1)
+ax.gridlines(draw_labels=True)
+
+ax.set_title("Original area with coastlines (WGS84) before projection")
+plt.show()
 
 # Create region in WGS84
 crs_wgs84 = 4326
 target_epsg = 3338
 
-region_wgs84 = om.Region(extent=bbox_wgs84, crs=4326)
+region_wgs84 = om.Region(extent=bbox_wgs84, crs=crs_wgs84)
 region_proj = region_wgs84.transform_to(target_epsg)
 print("Projected bbox (Albers):", region_proj.bbox)
-
-# Alaska Albers Equal Area (recommended native projection for Alaska)
 
 print("WGS84 Region bbox:", region_wgs84.bbox)
 
 # Transform region to Alaska Albers for correct meshing and plotting
-# Ensure bbox order is correct after projection
 xmin, ymin, xmax, ymax = region_proj.bbox
 xmin, xmax = min(xmin, xmax), max(xmin, xmax)
 ymin, ymax = min(ymin, ymax), max(ymin, ymax)
@@ -55,7 +64,6 @@ else:
 # Full path to GSHHS shapefile
 fname = "gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp"
 
-# Adjust minimum edge length to match projection units (meters for EPSG:3338)
 min_edge_length = 50  # 1 km minimum edge length (can adjust for detail)
 
 # Initialize Shoreline object using projected bbox and Alaska Albers CRS
