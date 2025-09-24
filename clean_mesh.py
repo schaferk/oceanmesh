@@ -3,25 +3,28 @@
 Clean mesh data by removing bad cells and unused points.
 
 Usage:
-  python clean_mesh.py --points points.dat --cells cells.dat --bad-cells bad_cells.txt
+  python clean_mesh.py [--points points.dat] [--cells cells.dat] [--bad-cells BAD_CELLS]
 
 Inputs:
-  points.dat: Original points file
-  cells.dat: Original cells file
-  bad_cells.txt: List of cell indices to remove (one per line)
+  points.dat: Original points file (default: points.dat)
+  cells.dat: Original cells file (default: cells.dat)
+  BAD_CELLS: List of cell indices to remove (default: BAD_CELLS)
 
 Outputs:
-  cleaned_points.dat: Points after removing unused points
-  cleaned_cells.dat: Cells after removing bad cells
+  Overwrites points.dat and cells.dat with cleaned data.
+  Backups made as points.dat.bak and cells.dat.bak before overwriting.
 """
 
 import argparse
+import shutil
+import os
 
 def read_points(filename):
     pts = []
     with open(filename) as f:
         for line in f:
-            if not line.strip(): continue
+            if not line.strip():
+                continue
             x, y, *_ = line.split()
             pts.append((float(x), float(y)))
     return pts
@@ -30,7 +33,8 @@ def read_cells(filename):
     cells = []
     with open(filename) as f:
         for line in f:
-            if not line.strip(): continue
+            if not line.strip():
+                continue
             parts = line.split()
             cx, cy = map(float, parts[0:2])
             nodes = list(map(int, parts[2:5]))
@@ -59,9 +63,9 @@ def write_points(filename, points):
 
 def main():
     parser = argparse.ArgumentParser(description="Clean mesh by removing bad cells and unused points.")
-    parser.add_argument("--points", required=True, help="Input points.dat file")
-    parser.add_argument("--cells", required=True, help="Input cells.dat file")
-    parser.add_argument("--bad-cells", required=True, help="File listing cell indices to remove")
+    parser.add_argument("--points", default="points.dat", help="Input points.dat file (default: points.dat)")
+    parser.add_argument("--cells", default="cells.dat", help="Input cells.dat file (default: cells.dat)")
+    parser.add_argument("--bad-cells", default="BAD_CELLS", help="File listing cell indices to remove (default: BAD_CELLS)")
     args = parser.parse_args()
 
     points = read_points(args.points)
@@ -85,13 +89,18 @@ def main():
             old_to_new[old_idx] = new_idx
             new_points.append(pt)
 
-    # Write cleaned data
-    write_cells("cleaned_cells.dat", cleaned_cells, old_to_new)
-    write_points("cleaned_points.dat", new_points)
+    # Backup original files before overwriting
+    shutil.copy2(args.points, args.points + ".bak")
+    shutil.copy2(args.cells, args.cells + ".bak")
+
+    # Write cleaned data (overwrite original files)
+    write_cells(args.cells, cleaned_cells, old_to_new)
+    write_points(args.points, new_points)
 
     print(f"Removed {len(bad_cells)} bad cells.")
     print(f"Points reduced from {len(points)} to {len(new_points)}.")
-    print("Cleaned files: cleaned_points.dat, cleaned_cells.dat")
+    print(f"Backups created: {args.points}.bak, {args.cells}.bak")
+    print(f"Cleaned files written: {args.points}, {args.cells}")
 
 if __name__ == "__main__":
     main()
