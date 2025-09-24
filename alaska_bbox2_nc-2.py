@@ -6,12 +6,19 @@ import rioxarray
 import numpy as np
 import oceanmesh as om
 
+import matplotlib.pyplot as plt
+
 # Setup logging
 logging.basicConfig(
     level=logging.DEBUG,  # Adjust level to DEBUG for verbose output
     format='%(asctime)s %(levelname)s %(filename)s:%(lineno)d - %(message)s',
     datefmt='%H:%M:%S'
 )
+
+# Suppress matplotlib font manager logging and other verbose debug logs
+logging.getLogger('matplotlib.font_manager').setLevel(logging.WARNING)
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 # File paths
@@ -37,8 +44,35 @@ try:
     lon_coords = np.linspace(-140.0, -127.0, lon_len)
     lat_coords = np.linspace(51.0, 58.0, lat_len)
 
-    logger.debug(f"Longitude coords first 5: {lon_coords[:5]}, last 5: {lon_coords[-5:]}")
-    logger.debug(f"Latitude coords first 5: {lat_coords[:5]}, last 5: {lat_coords[-5:]}")
+    #logger.debug(f"Longitude coords first 5: {lon_coords[:5]}, last 5: {lon_coords[-5:]}")
+    #logger.debug(f"Latitude coords first 5: {lat_coords[:5]}, last 5: {lat_coords[-5:]}")
+
+    logger.debug(f"Longitude coords first 5: {np.array2string(lon_coords[:5], precision=10, floatmode='fixed')}")
+    logger.debug(f"Longitude coords last 5: {np.array2string(lon_coords[-5:], precision=10, floatmode='fixed')}")
+    logger.debug(f"Latitude coords first 5: {np.array2string(lat_coords[:5], precision=10, floatmode='fixed')}")
+    logger.debug(f"Latitude coords last 5: {np.array2string(lat_coords[-5:], precision=10, floatmode='fixed')}")
+
+    # Calculate longitude and latitude span from coordinate arrays
+    lon_span = lon_coords[-1] - lon_coords[0]
+    lat_span = lat_coords[-1] - lat_coords[0]
+    logger.info(f"lat_coords[-1]: {lat_coords[-1]}")
+    logger.info(f"lat_coords[ 0]: {lat_coords[0]}")
+
+    mean_lat = (lat_coords[-1] + lat_coords[ 0]) / 2  # mean latitude of your bounding box
+
+    # Convert degrees to radians for cosine
+    mean_lat_rad = np.deg2rad(mean_lat)
+
+    # Correction factor for longitude scaling by latitude
+    correction = np.cos(mean_lat_rad)
+
+    # Compute adjusted aspect ratio for plotting:
+    aspect_ratio = (lon_span / lat_span) * correction
+
+    # Log the values
+    logger.info(f"Longitude span: {lon_span}")
+    logger.info(f"Latitude span: {lat_span}")
+    logger.info(f"Computed aspect ratio for plotting: {aspect_ratio}")
 
     # Check coordinate monotonicity and reverse if needed
     if not np.all(np.diff(lat_coords) > 0):
@@ -78,19 +112,35 @@ try:
     EPSG = 4326
     dem = om.DEM(geotiff_file, crs=EPSG)
 
+    logger.debug(f"###### dir(dem) ######")
+    print(dir(dem))
+    logger.debug(f"######################")
+
     # Log DEM info for debugging
     logger.debug(f"DEM bbox: {dem.bbox}")
-    logger.debug(f"DEM dims: {dem.dims}")
 
-    dem.plot(
+    logger.debug(f"DEM values shape: {dem.values.shape}")
+    logger.debug(f"Longitude coords shape: {lon_coords.shape}")
+    logger.debug(f"Latitude coords shape: {lat_coords.shape}")
+
+    logger.debug(f"dem.plot")
+    fig, ax =dem.plot(
         xlabel="longitude (WGS84 degrees)",
         ylabel="latitude (WGS84 degrees)",
         title="GEBCO_2022 15arc sec from GeoTIFF",
         cbarlabel="elevation (meters)",
         vmin=-100,
         vmax=10,
+    #    xlim=(lon_coords[0], lon_coords[-1]),  # Set longitude range for x-axis
+    #    ylim=(lat_coords[0], lat_coords[-1]),  # Set latitude range for y-axis
+    #    xlim=(dem.bbox.left, dem.bbox.right),
+    #    ylim=(dem.bbox.top, dem.bbox.bottom),  # Use as is and check if reversed
     )
 
+#    ax.set_aspect('auto')
+#    current_aspect = ax.get_aspect()
+#    print(f"Current aspect: {current_aspect}")
+#    plt.show()
 except Exception as e:
     logger.error(f"Error occurred: {e}", exc_info=True)
 
