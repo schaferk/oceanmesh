@@ -7,20 +7,35 @@ import oceanmesh as om
 
 from mesh_io import write_node_file, write_ele_file
 
+import logging
+import sys
+
+#logging.basicConfig(stream=sys.stdout, level=logging.WARNING)
+#logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+#logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
 start_time = time.perf_counter()  # Start timing
 
 verbose = True
+
+# ANSI escape codes for colors
+RED = "\033[91m"
+GREEN = "\033[92m"
+ENDC = "\033[0m"
 
 print(om.__version__)
 
 fname = "gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp"
 
 EPSG = 3338  # Alaska Albers projection
-region_name = 'alaska_albers'
+region_name = 'alaska_albers2'
 output_filename = f"{region_name}_epsg{EPSG}.vtk"
 
 # Define bbox in WGS84 coords as in draw_alaska.py (xmin, xmax, ymin, ymax)
 bbox_wgs84 = (-138.0, -129.0, 53.5, 57.0)
+bbox_wgs84 = (-140.0, -127.0, 51.0, 58.0)
+bbox_wgs84 = (-134.0, -130.0, 54.0, 56.0)    #alaska_albers2
+
 region_wgs84 = om.Region(extent=bbox_wgs84, crs=4326)
 
 # Transform region to Alaska Albers EPSG:3338
@@ -56,9 +71,18 @@ print("Shape of cells:", cells.shape)
 #sys.exit()
 
 # Clean and smooth mesh
-# 1. vertices of each triangle are arranged in counterclockwise order;
-#    Notes: fix_mesh is not defined
-#points, cells = fix_mesh(points, cells)
+points, cells, jx = om.fix_mesh(points, cells)
+if verbose:
+    print("# 1. vertices of each triangle are arranged in counterclockwise order;")
+    print("Length of jx:", len(jx))
+    print("Shape of points:", points.shape)
+    print("Total number of points:", len(points))
+    if len(jx) != len(points):
+        diff = len(jx) - len(points)
+        print(f"{RED}Warning: Length of jx ({len(jx)}) differs from length of points ({len(points)}).")
+        print(f"Number of points removed: {diff}{ENDC}")
+    else:
+        print(f"{GREEN}Length of jx matches length of points, no points removed.{ENDC}")
 
 # 2. conformity (a triangle is not allowed to have a vertex of another triangle in its interior);
 # 3. traversability (the number of boundary segments is equal to the number of boundary vertices,
@@ -73,11 +97,12 @@ if verbose:
 # These typically occur in channels at or near the grid scale.
 points, cells = om.delete_faces_connected_to_one_face(points, cells)
 if verbose:
-    print("Remove elements (i.e., 'faces') connected to only one channel")
+    print("# Remove elements (i.e., 'faces') connected to only one channel")
     print("Shape of points:", points.shape)
     print("Shape of  cells:", cells.shape)
 
 points, cells = om.delete_boundary_faces(points, cells, min_qual=0.15)
+
 if verbose:
     print("# Remove low quality boundary elements less than min_qual")
     print("Shape of points:", points.shape)
