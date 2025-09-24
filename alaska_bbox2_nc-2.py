@@ -44,13 +44,10 @@ try:
     lon_coords = np.linspace(-140.0, -127.0, lon_len)
     lat_coords = np.linspace(51.0, 58.0, lat_len)
 
-    #logger.debug(f"Longitude coords first 5: {lon_coords[:5]}, last 5: {lon_coords[-5:]}")
-    #logger.debug(f"Latitude coords first 5: {lat_coords[:5]}, last 5: {lat_coords[-5:]}")
-
-    logger.debug(f"Longitude coords first 5: {np.array2string(lon_coords[:5], precision=10, floatmode='fixed')}")
-    logger.debug(f"Longitude coords last 5: {np.array2string(lon_coords[-5:], precision=10, floatmode='fixed')}")
-    logger.debug(f"Latitude coords first 5: {np.array2string(lat_coords[:5], precision=10, floatmode='fixed')}")
-    logger.debug(f"Latitude coords last 5: {np.array2string(lat_coords[-5:], precision=10, floatmode='fixed')}")
+    logger.debug(f"Longitude coords first 3: {np.array2string(lon_coords[:3], precision=10, floatmode='fixed')}")
+    logger.debug(f"Longitude coords  last 3: {np.array2string(lon_coords[-3:], precision=10, floatmode='fixed')}")
+    logger.debug(f"Latitude  coords first 3: {np.array2string(lat_coords[:3], precision=10, floatmode='fixed')}")
+    logger.debug(f"Latitude  coords  last 3: {np.array2string(lat_coords[-4:], precision=10, floatmode='fixed')}")
 
     # Calculate longitude and latitude span from coordinate arrays
     lon_span = lon_coords[-1] - lon_coords[0]
@@ -128,19 +125,10 @@ try:
         xlabel="longitude (WGS84 degrees)",
         ylabel="latitude (WGS84 degrees)",
         title="GEBCO_2022 15arc sec from GeoTIFF",
-        cbarlabel="elevation (meters)",
         vmin=-100,
         vmax=10,
-    #    xlim=(lon_coords[0], lon_coords[-1]),  # Set longitude range for x-axis
-    #    ylim=(lat_coords[0], lat_coords[-1]),  # Set latitude range for y-axis
-    #    xlim=(dem.bbox.left, dem.bbox.right),
-    #    ylim=(dem.bbox.top, dem.bbox.bottom),  # Use as is and check if reversed
     )
 
-#    ax.set_aspect('auto')
-#    current_aspect = ax.get_aspect()
-#    print(f"Current aspect: {current_aspect}")
-#    plt.show()
 except Exception as e:
     logger.error(f"Error occurred: {e}", exc_info=True)
 
