@@ -826,9 +826,9 @@ class DEM(Grid):
             cmap="terrain",
             **kwargs,
         )
-        ax.set_xlabel("X-coordinate")
-        ax.set_ylabel("Y-coordinate")
-        ax.set_aspect("equal")
+        ax.set_xlabel("Longitude")
+        ax.set_ylabel("Latitude")
+        ax.set_aspect("auto")
         cbar = fig.colorbar(pc)
         cbar.set_label("Topobathymetric depth (m)")
         if not holding:
