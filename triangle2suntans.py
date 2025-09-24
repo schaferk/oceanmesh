@@ -185,6 +185,49 @@ def write_cells_file(tris, nodes, neigh, out="cells.dat"):
             nb3s = nb3-1 if nb3 > 0 else -1
             f.write(f"{xv:.9g} {yv:.9g} {p1:d} {p2:d} {p3:d} {nb1s:d} {nb2s:d} {nb3s:d}\n")
 
+def write_cells_file_hybrid(nodes, tris, neigh, edge_map, out='cells.dat'):
+    """
+    Writes cells.dat in HyGrid format where each line includes:
+    nfaces[ii], xv[ii], yv[ii], cells[ii,1..Nf], neigh[ii,1..Nf] for variable Nf=nfaces[ii].
+
+    Parameters as before.
+    """
+    with open(out, 'w') as f:
+        for edge, adj_tris in edge_map.items():
+            nfaces = len(adj_tris) if len(adj_tris) > 0 else 1  # or 4 fixed if you want quads
+
+            # Midpoint coordinates from nodes array (0-based nodes)
+            xv = (nodes[edge[0]][0] + nodes[edge[1]][0]) / 2
+            yv = (nodes[edge[0]][1] + nodes[edge[1]][1]) / 2
+
+            # Cell indices (convert 1-based adj_tris to zero-based to prepare)
+            cells = [(tri_id if tri_id else 0) for tri_id in adj_tris]
+            # Pad cells to nfaces with zero if needed
+            if len(cells) < nfaces:
+                cells += [0] * (nfaces - len(cells))
+
+            # Ensure cells use 1-based indexing or zero for empty
+            cells = [c if c != 0 else 0 for c in cells]
+
+            # Neighbors from neigh array for each cell if valid
+            neighbors = []
+            for c in cells[:nfaces]:
+                if c > 0 and neigh[c - 1] is not None and len(neigh[c - 1]) > 0:
+                    nbors = neigh[c - 1]
+                    neighbors.append(nbors[0] - 1 if nbors[0] > 0 else -1)
+                else:
+                    neighbors.append(-1)
+            # Pad neighbors to nfaces if needed
+            if len(neighbors) < nfaces:
+                neighbors += [-1] * (nfaces - len(neighbors))
+
+            # Output line: nfaces xv yv cells... neighbors...
+            line_vals = [str(nfaces), f"{xv:.6f}", f"{yv:.6f}"] + \
+                        [str(c) for c in cells[:nfaces]] + \
+                        [str(n) for n in neighbors[:nfaces]]
+
+            f.write(" ".join(line_vals) + "\n")
+
 def write_edges_file(edge_map, out="edges.dat"):
     """Write edges.dat: p1 p2 marker vor1 vor2
        - p1,p2 are 0-based node indices (endpoints)
@@ -257,6 +300,7 @@ def main():
     # Write outputs
     write_points_file(nodes, out="points.dat")
     write_cells_file(tris, nodes, neigh, out="cells.dat")
+    #write_cells_file_hybrid(nodes, tris, neigh, edge_map, out='cells.dat')
     write_edges_file(edge_map, out="edges.dat")
     write_celldata_file(len(tris)-1, args.depth, args.temperature, args.salinity, args.u0, args.v0, out="celldata.dat")
 
