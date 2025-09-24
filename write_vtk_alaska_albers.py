@@ -33,7 +33,7 @@ output_filename = f"{region_name}_epsg{EPSG}.vtk"
 
 # Define bbox in WGS84 coords as in draw_alaska.py (xmin, xmax, ymin, ymax)
 bbox_wgs84 = (-138.0, -129.0, 53.5, 57.0)
-bbox_wgs84 = (-140.0, -127.0, 51.0, 58.0)
+bbox_wgs84 = (-140.0, -127.0, 51.0, 58.0)    #bbox2
 bbox_wgs84 = (-134.0, -130.0, 54.0, 56.0)    #alaska_albers2
 
 region_wgs84 = om.Region(extent=bbox_wgs84, crs=4326)
