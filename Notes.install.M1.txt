@@ -1,3 +1,7 @@
+#to delete:
+conda deactivate
+conda env remove --name $conda_environment
+
 conda create -n oceanmesh python=3.10 -y
 conda activate oceanmesh
 conda install -c conda-forge cgal
@@ -8,26 +12,31 @@ conda install -c conda-forge proj
 export PROJ_DIR=/Users/schaferk/miniconda3/envs/oceanmesh
 export GDAL_CONFIG=$(which gdal-config)
 conda install -c conda-forge gmp mpfr
+###
 export LIBRARY_PATH=/opt/homebrew/lib
 export CPATH=/opt/homebrew/include
+###
 pip install numpy==1.21
 pip install -U versioneer
+###
 versioneer install
 git add oceanmesh/_version.py
 git add oceanmesh/_version.py
 git commit -m "Add versioneer generated _version.py"
+###
 conda install -c conda-forge gmp mpfr
 
-conda update -n base -c conda-forge conda
+conda update -n base -c conda-forge conda -y
 
+###
 #pip install -U -e .
 #pip install -U -e . --no-build-isolation
 pip install -U .
-
+###
 
 python -c "import oceanmesh; print(oceanmesh.__version__)"
 python -c "import xarray; print(xarray.__version__)"
- python -c "import oceanmesh; print(oceanmesh.__version__)"
+python -c "import oceanmesh; print(oceanmesh.__version__)"
 Traceback (most recent call last):
   File "<string>", line 1, in <module>
   File "/Users/schaferk/MDLOPS/repos/oceanmesh/oceanmesh/__init__.py", line 21, in <module>
@@ -69,5 +78,3 @@ print(
 )  # now the extents are in the desired CRS and can be passed to various functions later on
 
 
-#to delete:
-conda env remove --name ENV_NAME
