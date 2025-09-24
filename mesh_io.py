@@ -10,6 +10,7 @@ def write_node_file(points, region_name='region'):
         f.write(header)
         for idx, (x, y) in enumerate(points):
             f.write(f"{idx} {x:.8f} {y:.8f} 0\n")
+    print(f"WRITE: {node_filename}")
 
 def write_ele_file(cells, region_name='region'):
     ele_filename = f"{region_name}.ele"
@@ -23,4 +24,5 @@ def write_ele_file(cells, region_name='region'):
         for idx, tri_vertices in enumerate(cells):
             # Write triangle vertex indices and set attribute to 0
             f.write(f"{idx} {tri_vertices[0]} {tri_vertices[1]} {tri_vertices[2]}\n")
+    print(f"WRITE: {ele_filename}")
 
