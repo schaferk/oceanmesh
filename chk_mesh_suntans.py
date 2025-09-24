@@ -7,12 +7,14 @@ Detects:
   - Nearly-colinear points that can cause coincident Voronoi points
 
 Usage:
-  ./chk_mesh.py --points points.dat --cells cells.dat --min-angle 30.0
+  ./chk_mesh.py [-h] [--points points.dat] [--cells cells.dat] [--min-angle 30.0] [--bad_cells BAD_CELLS]
 
 Inputs:
-  points.dat: x y z
+  points.dat: x y type
   cells.dat:  cx cy n1 n2 n3 [neighbors...]
               where (cx,cy) is cell centroid and n1,n2,n3 are point indices
+
+  If no point source is applied, the point type should be 0.
 
 Outputs:
   Reports cells with bad geometry.
@@ -21,6 +23,7 @@ Outputs:
 import argparse
 import math
 import sys
+import os
 
 def read_points(filename):
     pts = []
@@ -73,11 +76,17 @@ def check_mesh(points, cells, min_angle):
     return bad_cells
 
 def main():
-    ap = argparse.ArgumentParser(description="Mesh quality checker for SUNTANS points/cells.")
-    ap.add_argument("--points", required=True, help="points.dat file (x y z)")
-    ap.add_argument("--cells", required=True, help="cells.dat file (cx cy n1 n2 n3 ...)")
-    ap.add_argument("--min-angle", type=float, default=20.0,
-                    help="Minimum allowed triangle angle in degrees (default=20)")
+    ap = argparse.ArgumentParser(
+        description="Mesh quality checker for SUNTANS points/cells.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    ap.add_argument("--points", default="points.dat", help="points.dat file (x y type)")
+    ap.add_argument("--cells" , default="cells.dat" , help="cells.dat file (cx cy n1 n2 n3 ...)")
+    ap.add_argument("--min-angle", type=float, default=30.0,
+                    help="Minimum allowed triangle angle in degrees")
+    ap.add_argument("--bad-cells", default="BAD_CELLS",
+                    help="Output file to write bad cell indices")
+
     args = ap.parse_args()
 
     points = read_points(args.points)
@@ -89,13 +98,21 @@ def main():
     num_bad = len(bad)
 
     if num_bad == 0:
-        print("✅ Mesh check passed: no sliver triangles found. ({total_cells} cells checked)")
+        print(f"✅ Mesh check passed: no sliver triangles found. ({total_cells} cells checked)")
     else:
         frac_bad = 100.0 * num_bad / total_cells
         print(f"⚠️ Found {num_bad} bad cells out of {total_cells} "
               f"({frac_bad:.2f}% below {args.min_angle}°)")
-        for ci, minang, nodes in bad[:20]:  # only show first 20
-            print(f"  Cell {ci}: min angle={minang:.2f}°, nodes={nodes}")
+        # Remove the old bad cells file if it exists
+        if os.path.exists(args.bad_cells):
+            os.remove(args.bad_cells)
+        print(f"Write bad cell indices to '{args.bad_cells}'")
+        # Write new bad cells indices
+        with open(args.bad_cells, "w") as f:
+            #for ci, minang, nodes in bad[:20]:  # only show first 20
+            for ci, minang, nodes in bad:  # write all bad cells, not just first 20
+                print(f"  Cell {ci}: min angle={minang:.2f}°, nodes={nodes}")
+                f.write(f"{ci}\n")
 
 if __name__ == "__main__":
     main()
