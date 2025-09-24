@@ -11,7 +11,9 @@ start_time = time.perf_counter()  # Start timing
 print(om.__version__)
 
 # Alaska region in WGS84 coordinates (lon/lat)
-bbox_wgs84 = (-138.0, -129.0, 53.5, 57.0)  # xmin, xmax, ymin, ymax
+bbox_wgs84 = (-138.0, -129.0, 53.0, 57.0)  # xmin, xmax, ymin, ymax
+bbox_wgs84 = (-142.0, -127.0, 51.0, 58.0)  # xmin, xmax, ymin, ymax
+#bbox_wgs84 = (-134.0, -130.0, 54.0, 56.0)  # xmin, xmax, ymin, ymax
 
 # Create region in WGS84
 crs_wgs84 = 4326
@@ -54,7 +56,7 @@ else:
 fname = "gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp"
 
 # Adjust minimum edge length to match projection units (meters for EPSG:3338)
-min_edge_length = 1000  # 1 km minimum edge length (can adjust for detail)
+min_edge_length = 50  # 1 km minimum edge length (can adjust for detail)
 
 # Initialize Shoreline object using projected bbox and Alaska Albers CRS
 shoreline = om.Shoreline(
