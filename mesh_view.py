@@ -28,6 +28,7 @@ def main():
         sys.exit(0)
 
     mesh_file = "new_york.vtk"  # Change as needed
+    mesh_file = "alaska_albers_epsg3338.vtk"  # Change as needed
     mesh = pv.read(mesh_file)
 
     plotter = pv.Plotter()
@@ -36,7 +37,7 @@ def main():
     plotter.add_axes()
     plotter.set_background("white")
     # Enable interactive rubber band zoom
-    plotter.enable_zoom_style()
+    #plotter.enable_zoom_style()
 
     # Show the interactive plot window
     plotter.show()
