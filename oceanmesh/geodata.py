@@ -800,10 +800,6 @@ class DEM(Grid):
         elif not dem.exists():
             raise FileNotFoundError(f"File {dem} could not be located.")
 
-        logger.info(f"DEM values shape: {self.values.shape}")
-        logger.info(f"bbox: {self.bbox}")
-        logger.info(f"dx={self.meta['transform'][0]}, dy={self.meta['transform'][4]}")
-
         super().__init__(
             bbox=bbox,
             crs=crs,
@@ -814,6 +810,10 @@ class DEM(Grid):
             values=np.fliplr(topobathy),  # we need to flip the array
             extrapolate=extrapolate,  # user-specified potentially "dangerous" option
         )
+
+        logger.info(f"DEM values shape: {self.values.shape}")
+        logger.info(f"bbox: {self.bbox}")
+        logger.info(f"dx={self.meta['transform'][0]}, dy={self.meta['transform'][4]}")
 
         super().build_interpolant()
 
@@ -831,8 +831,8 @@ class DEM(Grid):
             cmap="terrain",
             **kwargs,
         )
-        ax.set_xlabel("longitude (WGS84 degrees)")
-        ax.set_ylabel("latitude (WGS84 degrees)")
+        ax.set_xlabel("longitude (WSG84 degrees)")
+        ax.set_ylabel("latitude (WSG84 degrees)")
         ax.set_aspect("auto")
         cbar = fig.colorbar(pc)
         cbar.set_label("elevation (meters)")
