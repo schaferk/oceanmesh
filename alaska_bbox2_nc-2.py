@@ -120,6 +120,9 @@ try:
     logger.debug(f"Longitude coords shape: {lon_coords.shape}")
     logger.debug(f"Latitude coords shape: {lat_coords.shape}")
 
+    logger.debug(f"dem.bbox.top: {dem.bbox.top}")
+    logger.debug(f"dem.bbox.bottom: {dem.bbox.bottom}")
+
     logger.debug(f"dem.plot")
     fig, ax =dem.plot(
         xlabel="longitude (WGS84 degrees)",
@@ -127,6 +130,10 @@ try:
         title="GEBCO_2022 15arc sec from GeoTIFF",
         vmin=-100,
         vmax=10,
+   #    xlim=(lon_coords[0], lon_coords[-1]),  # Set longitude range for x-axis
+   #    ylim=(lat_coords[0], lat_coords[-1]),  # Set latitude range for y-axis     #BLANK DATA
+   #    xlim=(dem.bbox.left, dem.bbox.right),
+   #    ylim=(dem.bbox.top, dem.bbox.bottom),  # Use as is and check if reversed
     )
 
 except Exception as e:
