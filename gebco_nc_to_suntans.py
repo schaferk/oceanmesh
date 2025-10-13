@@ -15,7 +15,8 @@ Date: [Date]
 import netCDF4 as nc
 import numpy as np
 
-from utils import read_points
+from utils  import read_points
+from pyproj import Transformer
 
 #Step 1: Load NetCDF Elevation Data
 nc_file = './datasets/alaska_bbox2.nc'  
@@ -114,4 +115,20 @@ print(f"\nLoaded {len(projected_points)} projected points from file.")
 print("Sample (x, y) points in EPSG:3338:")
 for i in range(min(5, len(x_proj))):
     print(f"  x: {x_proj[i]:.2f}, y: {y_proj[i]:.2f}")
+
+# EPSG:3338 (input) → EPSG:4326 (output)
+transformer = Transformer.from_crs("EPSG:3338", "EPSG:4326", always_xy=True)
+
+# Transform all projected (x, y) points to (lon, lat)
+lon_query, lat_query = transformer.transform(x_proj, y_proj)
+
+# Check a few sample results
+print("\nSample transformed coordinates (EPSG:4326):")
+for i in range(min(5, len(lon_query))):
+    print(f"  Lon: {lon_query[i]:.6f}, Lat: {lat_query[i]:.6f}")
+
+# Check Range
+print("\nTransformed coordinate bounds:")
+print(f"  Latitude:  {lat_query.min():.4f} to {lat_query.max():.4f}")
+print(f"  Longitude: {lon_query.min():.4f} to {lon_query.max():.4f}")
 
