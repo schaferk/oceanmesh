@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
 
+"""
+Script to inspect a NetCDF file containing elevation data.
+
+- Loads a NetCDF file with a (lat, lon) grid in EPSG:4326.
+- Prints variable and dimension information.
+- Displays the shape and range of latitude, longitude, and elevation.
+- Assumes elevation data is stored as a 2D variable: elevation[lat, lon].
+
+Author: schaferkotter
+Date: 20251013
+"""
+
 import netCDF4 as nc
 import numpy as np
-
-#dataset_stem='/Users/schaferk/MDLOPS/repos/oceanmesh/datasets'
-#os.path.join(dataset_stem, "alaska_bbox2.nc")
 
 nc_file = './datasets/alaska_bbox2.nc'  
 
@@ -29,4 +38,5 @@ print("elevation shape:", elevation.shape)
 print("Latitude range: {:.2f} to {:.2f}".format(lat.min(), lat.max()))
 print("Longitude range: {:.2f} to {:.2f}".format(lon.min(), lon.max()))
 print("Elevation range: {:.2f} to {:.2f}".format(np.nanmin(elevation), np.nanmax(elevation)))
+print("Elevation units:", ds.variables['elevation'].units)
 
