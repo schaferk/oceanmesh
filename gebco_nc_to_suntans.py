@@ -8,13 +8,14 @@ Script to inspect a NetCDF file containing elevation data.
 - Displays the shape and range of latitude, longitude, and elevation.
 - Assumes elevation data is stored as a 2D variable: elevation[lat, lon].
 
-Author: schaferkotter
-Date: 20251013
+Author: [Author]
+Date: [Date]
 """
 
 import netCDF4 as nc
 import numpy as np
 
+#Step 1: Load NetCDF Elevation Data
 nc_file = './datasets/alaska_bbox2.nc'  
 
 # Load NetCDF file
@@ -39,4 +40,36 @@ print("Latitude range: {:.2f} to {:.2f}".format(lat.min(), lat.max()))
 print("Longitude range: {:.2f} to {:.2f}".format(lon.min(), lon.max()))
 print("Elevation range: {:.2f} to {:.2f}".format(np.nanmin(elevation), np.nanmax(elevation)))
 print("Elevation units:", ds.variables['elevation'].units)
+
+# Print sample values
+print("\nSample latitudes:", lat[:5])
+print("Sample longitudes:", lon[:5])
+print("Sample elevation values (top-left corner):\n", elevation[:5, :5])
+
+#test the spacing betwen latitudes
+lat_diff = np.diff(lat)
+lon_diff = np.diff(lon)
+
+print("Latitude spacing stats:")
+print("  min:", np.min(lat_diff))
+print("  max:", np.max(lat_diff))
+print("  unique values:", np.unique(lat_diff))
+
+print("Longitude spacing stats:")
+print("  min:", np.min(lon_diff))
+print("  max:", np.max(lon_diff))
+print("  unique values:", np.unique(lon_diff))
+
+#Step 2: Create Interpolator in (lat, lon)
+from scipy.interpolate import RegularGridInterpolator
+
+# Create interpolation function
+interp_func = RegularGridInterpolator(
+    (lat, lon),            # grid axes (lat, lon)
+    elevation,             # grid values
+    bounds_error=False,    # allows extrapolation (returns NaN)
+    fill_value=np.nan      # fill value for out-of-bounds queries
+)
+
+print("\nInterpolator successfully created.")
 
