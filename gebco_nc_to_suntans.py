@@ -18,7 +18,7 @@ import numpy as np
 from utils  import read_points
 from pyproj import Transformer
 
-#Step 1: Load NetCDF Elevation Data
+print('\n#Step 1: Load NetCDF Elevation Data')
 nc_file = './datasets/alaska_bbox2.nc'  
 
 # Load NetCDF file
@@ -63,7 +63,7 @@ print("  min:", np.min(lon_diff))
 print("  max:", np.max(lon_diff))
 print("  unique values:", np.unique(lon_diff))
 
-#Step 2: Create Interpolator in (lat, lon)
+print('\n#Step 2: Create Interpolator in (lat, lon)')
 from scipy.interpolate import RegularGridInterpolator
 
 # Create interpolation function
@@ -102,6 +102,7 @@ for idx, pt, interp_val, true_val in zip(test_indices, test_points, interp_value
     print(f"  Interpolated Elevation: {interp_val:.3f} m")
     print(f"  Difference:           {diff:.6e} m\n")
 
+print('\n#Step 3: Read ASCII File with Projected Coordinates')
 # Call reader
 projected_points = read_points('./points.dat')
 
@@ -116,6 +117,7 @@ print("Sample (x, y) points in EPSG:3338:")
 for i in range(min(5, len(x_proj))):
     print(f"  x: {x_proj[i]:.2f}, y: {y_proj[i]:.2f}")
 
+print('\n#Step 4: Reproject EPSG:3338 (x, y) → EPSG:4326 (lon, lat)')
 # EPSG:3338 (input) → EPSG:4326 (output)
 transformer = Transformer.from_crs("EPSG:3338", "EPSG:4326", always_xy=True)
 
@@ -131,4 +133,20 @@ for i in range(min(5, len(lon_query))):
 print("\nTransformed coordinate bounds:")
 print(f"  Latitude:  {lat_query.min():.4f} to {lat_query.max():.4f}")
 print(f"  Longitude: {lon_query.min():.4f} to {lon_query.max():.4f}")
+
+print('\n#Step 5: Interpolate Elevation at (lat, lon)')
+
+# Stack into shape (N, 2) — required by interp_func
+query_points = np.column_stack((lat_query, lon_query))  # shape: (N, 2)
+
+# Interpolate elevation at each (lat, lon) point
+elev_interp = interp_func(query_points)  # returns array of shape (N,)
+
+# Convention: depth is positive downward → depth = -elevation
+depth = -elev_interp
+
+# Print sample Output
+print("\n--- Sample Depth Results ---")
+for i in range(min(5, len(depth))):
+    print(f"  x: {x_proj[i]:.2f}, y: {y_proj[i]:.2f}, depth: {depth[i]:.2f} m")
 
