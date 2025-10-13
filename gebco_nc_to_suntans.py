@@ -15,6 +15,8 @@ Date: [Date]
 import netCDF4 as nc
 import numpy as np
 
+from utils import read_points
+
 #Step 1: Load NetCDF Elevation Data
 nc_file = './datasets/alaska_bbox2.nc'  
 
@@ -98,4 +100,18 @@ for idx, pt, interp_val, true_val in zip(test_indices, test_points, interp_value
     print(f"  True Elevation:       {true_val:.3f} m")
     print(f"  Interpolated Elevation: {interp_val:.3f} m")
     print(f"  Difference:           {diff:.6e} m\n")
+
+# Call reader
+projected_points = read_points('./points.dat')
+
+# Convert to NumPy array
+projected_points = np.array(projected_points)  # shape (N, 2)
+x_proj = projected_points[:, 0]
+y_proj = projected_points[:, 1]
+
+# Print summary
+print(f"\nLoaded {len(projected_points)} projected points from file.")
+print("Sample (x, y) points in EPSG:3338:")
+for i in range(min(5, len(x_proj))):
+    print(f"  x: {x_proj[i]:.2f}, y: {y_proj[i]:.2f}")
 
