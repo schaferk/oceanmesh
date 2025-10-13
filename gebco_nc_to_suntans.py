@@ -73,3 +73,29 @@ interp_func = RegularGridInterpolator(
 
 print("\nInterpolator successfully created.")
 
+#query the interpolator at known lat/lon points from the grid:
+
+# Test indices into the grid (lat_idx, lon_idx)
+test_indices = [
+    (0, 0),
+    (100, 100),
+    (-1, -1)
+]
+
+# Prepare test points and true values
+test_points = np.array([[lat[i], lon[j]] for i, j in test_indices])
+true_values = np.array([elevation[i, j] for i, j in test_indices])
+
+# Interpolate at those points
+interp_values = interp_func(test_points)
+
+# Compare
+print("\n--- Interpolation Accuracy Check ---")
+for idx, pt, interp_val, true_val in zip(test_indices, test_points, interp_values, true_values):
+    diff = interp_val - true_val
+    print(f"Grid index: {idx}")
+    print(f"  Lat: {pt[0]:.6f}, Lon: {pt[1]:.6f}")
+    print(f"  True Elevation:       {true_val:.3f} m")
+    print(f"  Interpolated Elevation: {interp_val:.3f} m")
+    print(f"  Difference:           {diff:.6e} m\n")
+
