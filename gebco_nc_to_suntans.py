@@ -18,6 +18,8 @@ import numpy as np
 from utils  import read_points
 from pyproj import Transformer
 
+output_file = "./depth.dat-voro"
+
 print('\n#Step 1: Load NetCDF Elevation Data')
 nc_file = './datasets/alaska_bbox2.nc'  
 
@@ -150,3 +152,12 @@ print("\n--- Sample Depth Results ---")
 for i in range(min(5, len(depth))):
     print(f"  x: {x_proj[i]:.2f}, y: {y_proj[i]:.2f}, depth: {depth[i]:.2f} m")
 
+print('\n#Step 6: Write Output File (x,y,depth)')
+
+output = np.column_stack((x_proj, y_proj, depth))
+
+# Save to ASCII file
+np.savetxt(output_file, output, fmt="%.3f", comments="")
+
+# Confirm to user
+print(f"Output file '{output_file}' written successfully.")
