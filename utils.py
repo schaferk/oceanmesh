@@ -19,3 +19,15 @@ def read_points(filename):
             pts.append((float(x), float(y)))
     return pts
 
+
+def read_cells(filename):
+    cells = []
+    with open(filename) as f:
+        for line in f:
+            if not line.strip():
+                continue
+            parts = line.split()
+            cx, cy = map(float, parts[0:2])
+            nodes = list(map(int, parts[2:5]))
+            cells.append((cx, cy, nodes))
+    return cells
