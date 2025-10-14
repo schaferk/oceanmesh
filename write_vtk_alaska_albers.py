@@ -10,6 +10,12 @@ from mesh_io import write_node_file, write_ele_file
 import logging
 import sys
 
+from oceanmesh import Region
+from pyproj import Transformer
+
+# Set up transformer
+transformer = Transformer.from_crs("EPSG:4326", "EPSG:3338", always_xy=True)
+
 #logging.basicConfig(stream=sys.stdout, level=logging.WARNING)
 #logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 #logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -27,26 +33,45 @@ print(om.__version__)
 
 fname = "gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp"
 
+# EPSG codes
 EPSG = 3338  # Alaska Albers projection
+EPSG_WGS84 = 4326
+EPSG_ALASKA_ALBERS = 3338
+
 region_name = 'alaska_albers2'
 output_filename = f"{region_name}_epsg{EPSG}.vtk"
 
-# Define bbox in WGS84 coords as in draw_alaska.py (xmin, xmax, ymin, ymax)
-bbox_wgs84 = (-138.0, -129.0, 53.5, 57.0)
-bbox_wgs84 = (-140.0, -127.0, 51.0, 58.0)    #bbox2
-bbox_wgs84 = (-134.0, -130.0, 54.0, 56.0)    #alaska_albers2
-
+# Step 1: Define WGS84 bbox
+#bbox_wgs84 = (-134.0, 54.0, -130.0, 56.0)    #alaska_albers2
+#bbox_wgs84 = (-138.0, 53.5, -129.0, 57.0)
+bbox_wgs84 = (-140.0, 51.0, -127.0, 58.0)  # (lon_min, lat_min, lon_max, lat_max) #bbox2
 region_wgs84 = om.Region(extent=bbox_wgs84, crs=4326)
 
-# Transform region to Alaska Albers EPSG:3338
-region_proj = region_wgs84.transform_to(EPSG)
+# Step 2: Transform corners manually with pyproj
+transformer = Transformer.from_crs("EPSG:4326", "EPSG:3338", always_xy=True)
 
-# Ensure bbox order is correct after projection
-xmin, ymin, xmax, ymax = region_proj.bbox
-xmin, xmax = min(xmin, xmax), max(xmin, xmax)
-ymin, ymax = min(ymin, ymax), max(ymin, ymax)
-region_proj.bbox = (xmin, ymin, xmax, ymax)
-print("Projected bbox (Alaska Albers):", region_proj.bbox)
+# Step 3: Transform all 4 corners of the WGS84 bbox
+lon_min, lat_min, lon_max, lat_max = bbox_wgs84
+corners_lonlat = [
+    (lon_min, lat_min),  #SW
+    (lon_min, lat_max),  #NW
+    (lon_max, lat_min),  #SE
+    (lon_max, lat_max),  #NE
+]
+# Transform all 4 corners
+xs, ys = zip(*[transformer.transform(lon, lat) for lon, lat in corners_lonlat])
+
+# Step 4: Compute safe projected bbox
+xmin, xmax = min(xs), max(xs)
+ymin, ymax = min(ys), max(ys)
+bbox_proj_region = (xmin, xmax, ymin, ymax)
+
+print("Computed projected bbox:")
+print(f"  x: {xmin:.2f} to {xmax:.2f}")
+print(f"  y: {ymin:.2f} to {ymax:.2f}")
+
+# Step 5: Now create projected Region
+region_proj = Region(extent=bbox_proj_region, crs=EPSG_ALASKA_ALBERS)
 
 min_edge_length = 1000  # minimum mesh size ~1 km in meters for Albers projection
 
@@ -63,12 +88,7 @@ domain = om.signed_distance_function(shore)
 points, cells = om.generate_mesh(domain, edge_length)
 
 print("Shape of points:", points.shape)
-# Print the first 5 entries
-#print("First few points:\n", points[:5])
-
 print("Shape of cells:", cells.shape)
-#print("First few cells:\n", cells[:5])
-#sys.exit()
 
 # Clean and smooth mesh
 points, cells, jx = om.fix_mesh(points, cells)
