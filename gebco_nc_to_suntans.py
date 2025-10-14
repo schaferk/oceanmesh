@@ -14,6 +14,7 @@ Date: [Date]
 
 import netCDF4 as nc
 import numpy as np
+import os
 
 from utils  import read_points
 from pyproj import Transformer
@@ -22,6 +23,8 @@ output_file = "./depth.dat-voro"
 
 print('\n#Step 1: Load NetCDF Elevation Data')
 nc_file = './datasets/alaska_bbox2.nc'  
+nc_file = './datasets/alaska_bbox4.nc'
+nc_basename = os.path.splitext(os.path.basename(nc_file))[0]
 
 # Load NetCDF file
 ds = nc.Dataset(nc_file)
@@ -136,6 +139,15 @@ print("\nTransformed coordinate bounds:")
 print(f"  Latitude:  {lat_query.min():.4f} to {lat_query.max():.4f}")
 print(f"  Longitude: {lon_query.min():.4f} to {lon_query.max():.4f}")
 
+if (lat_query.min() < lat.min() or lat_query.max() > lat.max() or
+    lon_query.min() < lon.min() or lon_query.max() > lon.max()):
+    print("⚠️  Warning: Query domain exceeds DEM coverage. Consider expanding DEM subset.")
+    # add method to programatically extract bbox4
+    #need environment with ncks
+    #ncks -d lon,-143.0,-126.0 -d lat,48.0,60.0 GEBCO_2022_deflate.nc -O nc_file
+else:
+    print("✅ Query domain fully covered by DEM.")
+
 print('\n#Step 5: Interpolate Elevation at (lat, lon)')
 
 # Stack into shape (N, 2) — required by interp_func
@@ -161,3 +173,39 @@ np.savetxt(output_file, output, fmt="%.3f", comments="")
 
 # Confirm to user
 print(f"Output file '{output_file}' written successfully.")
+
+#Diagnose before fixing
+# Identify NaN locations
+mask_nan = np.isnan(depth)
+frac_nan = np.mean(mask_nan)
+#print(f"Fraction NaN: {np.mean(mask_nan):.2%}")
+print(f"Fraction of NaN depth values: {frac_nan:.2%}")
+
+import matplotlib.pyplot as plt
+
+#plt.scatter(x_proj[mask_nan], y_proj[mask_nan], c='r', s=5, label='NaN points')
+#plt.scatter(x_proj[~mask_nan], y_proj[~mask_nan], c='k', s=1, label='Valid')
+#plt.legend()
+#plt.title("NaN distribution in projected coordinates")
+#plt.show()
+
+# Create scatter plot of NaN vs valid points
+plt.figure(figsize=(8, 6))
+plt.scatter(x_proj[~mask_nan], y_proj[~mask_nan],
+            c='k', s=2, label='Valid')
+plt.scatter(x_proj[mask_nan], y_proj[mask_nan],
+            c='r', s=6, label='NaN')
+plt.xlabel("x (m, EPSG:3338)")
+plt.ylabel("y (m, EPSG:3338)")
+#plt.title(f"NaN Distribution in Depth Field ({frac_nan:.2%} NaN)")
+plt.title(f"NaN Distribution in Depth Field ({frac_nan:.2%})\nSource: {nc_basename}")
+plt.legend(markerscale=3)
+plt.axis('equal')
+plt.tight_layout()
+
+# Save plot as PNG
+png_name = f"nan_depth_distribution_{nc_basename}.png"
+plt.savefig(png_name, dpi=300)
+plt.close()
+
+print(f"Saved NaN diagnostic plot: {png_name}")
