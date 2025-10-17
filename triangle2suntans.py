@@ -21,6 +21,19 @@ import argparse
 import math
 import sys
 import os
+import numpy as np
+
+import logging
+# Configure logger
+logging.basicConfig(
+    level=logging.INFO,        # minimum level to capture
+    format="%(asctime)s [%(levelname)s] %(message)s",  # optional format
+    handlers=[logging.StreamHandler()]  # ensures logs go to stdout
+)
+
+logger = logging.getLogger(__name__)
+
+import sys
 
 # colored output
 RED = "\033[91m"
@@ -238,6 +251,34 @@ def main():
 
     print(f"Read {len(nodes)-1} points, {len(tris)-1} triangles.")
 
+    try:
+        max_index_cells = np.max(np.fromiter(
+            (v for t in tris if t is not None for v in t),
+            dtype=int
+        ))
+        min_index_cells = np.min(np.fromiter(
+            (v for t in tris if t is not None for v in t),
+            dtype=int
+        ))
+        max_index_xp = np.max(np.fromiter(
+            (i for i, n in enumerate(nodes) if n is not None),
+            dtype=int
+        ))
+    except ValueError as e:
+        logger.error(f"ValueError in index calculation: {e}")
+        sys.exit(1)
+
+    # Log diagnostic info about cells indices and self.xp size
+    logger.info(f"cells min index: {min_index_cells}, max index: {max_index_cells}")
+    logger.info(f"nodes axis 0 size: {max_index_xp} (max valid index {max_index_xp})")
+
+    # Warn if indices are out of bounds
+    if min_index_cells < 0 or max_index_cells > max_index_xp:
+        logger.warning(
+            f"cells indices out of valid self.xp range: min index {min_index_cells}, "
+            f"max index {max_index_cells}, valid max index {max_index_xp}"
+        )
+
     edge_map = build_edge_map(tris)
 
     write_points_file(nodes, out="points.dat")
@@ -253,3 +294,6 @@ def main():
 if __name__ == "__main__":
     main()
 
+#    for handler in logger.handlers:
+#        handler.flush()
+#    sys.exit()
