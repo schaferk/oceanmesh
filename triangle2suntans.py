@@ -96,8 +96,12 @@ def read_ele(filename, base=1):
             n2 = int(float(parts[2])) + (1 - base)
             n3 = int(float(parts[3])) + (1 - base)
             tris[tid] = (n1, n2, n3)
-    if tris is None or any(t is None for t in tris[1:]):
-        raise RuntimeError("Failed to read .ele or missing triangles")
+    try:
+        if tris is None or any(t is None for t in tris[1:]):
+            raise RuntimeError("Failed to read .ele or missing triangles")
+    except RuntimeError as e:
+        logger.exception("Runtime error occurred")
+
     return tris
 
 def read_neigh(filename, expected_nele, base=1):
@@ -133,8 +137,12 @@ def read_neigh(filename, expected_nele, base=1):
             nb2 = nb2 if nb2 >= 0 else -1
             nb3 = nb3 if nb3 >= 0 else -1
             neigh[tid] = (nb1, nb2, nb3)
-    if neigh is None or any(n is None for n in neigh[1:]):
-        raise RuntimeError("Failed to read .neigh or missing neighbor rows")
+    try:
+        if neigh is None or any(n is None for n in neigh[1:]):
+            raise RuntimeError("Failed to read .neigh or missing neighbor rows")
+    except RuntimeError as e:
+        logger.exception("Runtime error occurred")
+
     return neigh
 
 def circumcenter(pa, pb, pc):
