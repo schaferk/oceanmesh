@@ -98,6 +98,7 @@ def main():
     print(f"Maximum vertex index in elems: {max_vertex}")
 
     neighbors = compute_neighbors(elems)
+    #neightbors = compute_vertex_neighbors(elems)
     # neighbors is a list of lists, e.g., [[1, 2], [0, 3], ...]
     max_neighbor = max(max(sublist) for sublist in neighbors if sublist)  # Handle empty sublists safely
     print(f"Maximum neighbor in neighbors: {max_neighbor}")
