@@ -12,6 +12,7 @@ Author: [Author]
 Date: [Date]
 """
 
+import argparse
 import netCDF4 as nc
 import numpy as np
 import os
@@ -19,11 +20,43 @@ import os
 from utils  import read_points
 from pyproj import Transformer
 
+help_epilog = '''
+Example usage:
+   -h
+  gebco_nc_to_suntans.py -h
+  gebco_nc_to_suntans.py --file ./datasets/alaska_bbox4.nc
+  gebco_nc_to_suntans.py --file ./datasets/alaska_bbox4.nc --output depth.dat-voro
+  #{script_name} --file ./datasets/alaska_bbox4.nc --output depth.dat-voro
+'''
+
+parser = argparse.ArgumentParser(
+    description="Inspect and summarize NetCDF elevation data (lat/lon grid in EPSG:4326).",
+    epilog=help_epilog,
+    formatter_class=argparse.RawDescriptionHelpFormatter
+)
+
+parser.add_argument(
+    "-f", "--file",
+    default="./datasets/alaska_bbox4.nc",
+    help="Path to NetCDF file containing elevation data. (default: %(default)s)"
+)
+
+parser.add_argument(
+    "-o", "--output",
+    default="depth.dat-voro",
+    help="Path to output file. (default: %(default)s)"
+)
+
+# Automatically adds -h / --help option
+args = parser.parse_args()
+
 output_file = "./depth.dat-voro"
+output_file = args.output
 
 print('\n#Step 1: Load NetCDF Elevation Data')
 nc_file = './datasets/alaska_bbox2.nc'  
 nc_file = './datasets/alaska_bbox4.nc'
+nc_file = args.file
 nc_basename = os.path.splitext(os.path.basename(nc_file))[0]
 
 # Load NetCDF file
