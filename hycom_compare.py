@@ -25,8 +25,8 @@ help_epilog = '''
 Example usage:
    -h
   hycom_compare.py -h
-  hycom_compare.py --file ./datasets/alaska_bbox4.nc
-  hycom_compare.py --file ./datasets/alaska_bbox4.nc --output depth.dat-voro
+  hycom_compare.py --file /path_to_hycom_file/hycom_file.nc
+  hycom_compare.py --file /Users/schaferk/MDLOPS/repos/suntanspy/HYCOM_ALASKA_20140621.000000-20140621.000000.nc
 '''
 
 parser = argparse.ArgumentParser(
@@ -68,13 +68,10 @@ print("Dimensions:", ds.dimensions.keys())
 lat = ds.variables['Latitude'][:]      # 1D array
 lon = ds.variables['Longitude'][:]      # 1D array
 
-# Print shapes
-print("lat shape:", lat.shape)
-print("lon shape:", lon.shape)
-
 # Print value ranges
-print("Latitude range: {:.2f} to {:.2f}".format(lat.min(), lat.max()))
 print("Longitude range: {:.2f} to {:.2f}".format(lon.min(), lon.max()))
+print("Longitude range: {:.2f} to {:.2f}".format(lon.min()-360.0, lon.max()-360.0))
+print("Latitude range: {:.2f} to {:.2f}".format(lat.min(), lat.max()))
 
 print('\n#Step 3: Read ASCII ./points.dat File with Projected Coordinates')
 # Call reader
@@ -82,22 +79,22 @@ projected_points = read_points('./points.dat')
 
 # Convert to NumPy array
 projected_points = np.array(projected_points)  # shape (N, 2)
-x_proj = projected_points[:, 0]
-y_proj = projected_points[:, 1]
+xv = projected_points[:, 0]
+yv = projected_points[:, 1]
 
 # Print summary
 print(f"\nLoaded {len(projected_points)} projected points from file points.dat.")
 
 # Print value ranges
-print("X projected range: {:.2f} to {:.2f}".format(x_proj.min(), x_proj.max()))
-print("Y projected range: {:.2f} to {:.2f}".format(y_proj.min(), y_proj.max()))
+print("X projected range: {:.2f} to {:.2f}".format(xv.min(), xv.max()))
+print("Y projected range: {:.2f} to {:.2f}".format(yv.min(), yv.max()))
 
 print('\n#Step 4: Reproject EPSG:3338 (x, y) → EPSG:4326 (lon, lat)')
 # EPSG:3338 (input) → EPSG:4326 (output)
 transformer = Transformer.from_crs("EPSG:3338", "EPSG:4326", always_xy=True)
 
 # Transform all projected (x, y) points to (lon, lat)
-lon_query, lat_query = transformer.transform(x_proj, y_proj)
+lon_query, lat_query = transformer.transform(xv, yv)
 
 # Check Range
 print("\nTransformed coordinate bounds:")
@@ -113,7 +110,7 @@ lat_corners = [lat[0,0], lat[0,-1], lat[-1,0], lat[-1,-1]]
 
 # Forward projection
 x_corners, y_corners = transformer_to_proj.transform(lon_corners, lat_corners)
-
+xylon, xylat = transformer_to_proj.transform(lon, lat)
 # Compute projected coordinate bounds
 x_min, x_max = np.min(x_corners), np.max(x_corners)
 y_min, y_max = np.min(y_corners), np.max(y_corners)
@@ -122,34 +119,50 @@ print("\nProjected grid coordinate bounds (corners only):")
 print(f"  X range: {x_min:.2f} to {x_max:.2f}")
 print(f"  Y range: {y_min:.2f} to {y_max:.2f}")
 
-print("\n now use Longitude in -180,180")
-# Extract corners as arrays
-lon_corners = np.array([lon[0,0], lon[0,-1], lon[-1,0], lon[-1,-1]])
-lat_corners = np.array([lat[0,0], lat[0,-1], lat[-1,0], lat[-1,-1]])
+#print("\n now use Longitude in -180,180")
+## Extract corners as arrays
+#lon_corners = np.array([lon[0,0], lon[0,-1], lon[-1,0], lon[-1,-1]])
+#lat_corners = np.array([lat[0,0], lat[0,-1], lat[-1,0], lat[-1,-1]])
+#
+## Normalize longitudes from 0–360 to -180–180
+#lon_corners = np.where(lon_corners > 180, lon_corners - 360, lon_corners)
+#
+## Forward projection
+#x_corners, y_corners = transformer_to_proj.transform(lon_corners, lat_corners)
+#
+## Compute projected coordinate bounds
+#x_min, x_max = np.min(x_corners), np.max(x_corners)
+#y_min, y_max = np.min(y_corners), np.max(y_corners)
+#
+#print("\nProjected grid coordinate bounds (corners only):")
+#print(f"  X range: {x_min:.2f} to {x_max:.2f}")
+#print(f"  Y range: {y_min:.2f} to {y_max:.2f}")
 
-# Normalize longitudes from 0–360 to -180–180
-lon_corners = np.where(lon_corners > 180, lon_corners - 360, lon_corners)
+import matplotlib.pyplot as plt
 
-# Forward projection
-x_corners, y_corners = transformer_to_proj.transform(lon_corners, lat_corners)
+plt.figure(figsize=(8,6))
+plt.scatter(xylon, xylat, s=1, label='source')
+plt.scatter(xv, yv, s=1, label='query', alpha=0.5)
+plt.legend()
+plt.xlabel("X (EPSG:3338)")
+plt.ylabel("Y (EPSG:3338)")
+plt.title("Source vs Query Points")
+plt.tight_layout()
 
-# Compute projected coordinate bounds
-x_min, x_max = np.min(x_corners), np.max(x_corners)
-y_min, y_max = np.min(y_corners), np.max(y_corners)
+# Save as PNG
+plt.savefig("source_vs_query.png", dpi=300)
 
-print("\nProjected grid coordinate bounds (corners only):")
-print(f"  X range: {x_min:.2f} to {x_max:.2f}")
-print(f"  Y range: {y_min:.2f} to {y_max:.2f}")
-
-sys.exit()
 if (lat_query.min() < lat.min() or lat_query.max() > lat.max() or
     lon_query.min() < lon.min() or lon_query.max() > lon.max()):
+    print("")
     print("⚠️  Warning: Query domain exceeds DEM coverage. Consider expanding DEM subset.")
     # add method to programatically extract bbox4
     #need environment with ncks
     #ncks -d lon,-143.0,-126.0 -d lat,48.0,60.0 GEBCO_2022_deflate.nc -O nc_file
 else:
     print("✅ Query domain fully covered by DEM.")
+
+sys.exit()
 
 print('\n#Step 5: Interpolate Elevation at (lat, lon)')
 
