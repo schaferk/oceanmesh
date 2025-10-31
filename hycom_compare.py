@@ -81,6 +81,12 @@ print("\nDEM bounds (lon/lat):")
 print(f"  lon: {lon_dmin:.4f} to {lon_dmax:.4f}")
 print(f"  lat: {lat_dmin:.4f} to {lat_dmax:.4f}")
 
+# Format coordinates with sensible precision and remove trailing zeros
+lon_min_str = f"{lon_dmin:.2f}".rstrip('0').rstrip('.')
+lon_max_str = f"{lon_dmax:.2f}".rstrip('0').rstrip('.')
+lat_min_str = f"{lat_dmin:.2f}".rstrip('0').rstrip('.')
+lat_max_str = f"{lat_dmax:.2f}".rstrip('0').rstrip('.')
+
 print('\n# Step 2: Load Query Points (Projected EPSG:3338)')
 projected_points = np.array(read_points('./points.dat'))
 xv, yv = projected_points[:, 0], projected_points[:, 1]
@@ -129,7 +135,7 @@ if outside:
     print(f"  lon: {lon_min_new:.4f} to {lon_max_new:.4f}")
     print(f"  lat: {lat_min_new:.4f} to {lat_max_new:.4f}")
 
-    expanded_nc = f"{os.path.splitext(nc_file)[0]}_expanded.nc"
+    #expanded_nc = f"{os.path.splitext(nc_file)[0]}_expanded.nc"
 
 #    cmd = [
 #        "ncks",
@@ -159,6 +165,11 @@ else:
     Lon, Lat = np.meshgrid(lon, lat)
     xylon, xylat = transformer_to_proj.transform(Lon, Lat)
 
+# Construct coordinate range suffix
+coord_suffix = f"{lon_min_str}-{lon_max_str}_{lat_min_str}-{lat_max_str}"
+
+filename = f"source_vs_query_{nc_basename}_{coord_suffix}.png"
+
 plt.figure(figsize=(8, 6))
 plt.scatter(xylon, xylat, s=1, label='source DEM')
 plt.scatter(xv, yv, s=1, label='query points', alpha=0.5)
@@ -167,11 +178,11 @@ plt.xlabel("X (EPSG:3338)")
 plt.ylabel("Y (EPSG:3338)")
 plt.title("Source vs Query Coverage Check")
 plt.tight_layout()
-plt.savefig(f"source_vs_query_{nc_basename}.png", dpi=300)
+plt.savefig(filename, dpi=300)
 plt.close()
-print(f"Saved coverage diagnostic: source_vs_query_{nc_basename}.png")
+print(f"Saved coverage diagnostic: {filename}")
 
-# You can later continue with interpolation logic here...
+# later continue with interpolation logic here...
 sys.exit(0)
 
 # Apply to your longitude coordinate column before UTM conversion:
