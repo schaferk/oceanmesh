@@ -1,36 +1,48 @@
 #!/usr/bin/env python3
-
 """
-Script to inspect a NetCDF file
+Script to inspect a NetCDF file and ensure coverage for interpolation.
 
 - Loads a NetCDF file with a (lat, lon) grid in EPSG:4326.
-- Prints variable and dimension information.
-- Displays the shape and range of latitude, longitude, and elevation.
-- Assumes elevation data is stored as a 2D variable: elevation[lat, lon].
+- Converts query points (EPSG:3338) → EPSG:4326 and checks coverage.
+- Automatically expands DEM subset using ncks if needed.
+- Saves diagnostic plots for coverage and NaN distributions.
 
 Author: [Author]
 Date: [Date]
 """
+
+def wrap_longitudes(lon_array, mode='180'):
+    """
+    Wrap longitudes either to [-180, 180) or [0, 360).
+    mode = '180'  → [-180, 180)
+    mode = '360'  → [0, 360)
+    """
+    if mode == '180':
+        return ((lon_array + 180) % 360) - 180
+    elif mode == '360':
+        return lon_array % 360
+    else:
+        raise ValueError("mode must be '180' or '360'")
 
 import argparse
 import netCDF4 as nc
 import numpy as np
 import os
 import sys
-
-from utils  import read_points
+import subprocess
+import matplotlib.pyplot as plt
 from pyproj import Transformer
+from utils import read_points
 
 help_epilog = '''
 Example usage:
-   -h
   hycom_compare.py -h
+  hycom_compare.py --file ./datasets/alaska_bbox4.nc
   hycom_compare.py --file /path_to_hycom_file/hycom_file.nc
-  hycom_compare.py --file /Users/schaferk/MDLOPS/repos/suntanspy/HYCOM_ALASKA_20140621.000000-20140621.000000.nc
 '''
 
 parser = argparse.ArgumentParser(
-    description="Inspect and summarize NetCDF elevation data (lat/lon grid in EPSG:4326).",
+    description="Inspect and expand NetCDF DEM coverage if needed.",
     epilog=help_epilog,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -47,181 +59,123 @@ parser.add_argument(
     help="Path to output file. (default: %(default)s)"
 )
 
-# Automatically adds -h / --help option
 args = parser.parse_args()
 
-output_file = "./depth.dat-voro"
 output_file = args.output
-
-print('\n#Step 1: Load NetCDF Elevation Data')
 nc_file = args.file
 nc_basename = os.path.splitext(os.path.basename(nc_file))[0]
 
-# Load NetCDF file
+print('\n# Step 1: Load NetCDF Elevation Data')
 ds = nc.Dataset(nc_file)
-
-# Print available variables and dimensions
 print("Variables:", ds.variables.keys())
 print("Dimensions:", ds.dimensions.keys())
 
-# Extract variables
-lat = ds.variables['Latitude'][:]      # 1D array
-lon = ds.variables['Longitude'][:]      # 1D array
+# --- Extract lat/lon and compute DEM bounds ---
+lat = ds.variables['Latitude'][:]
+lon = ds.variables['Longitude'][:]
 
-# Print value ranges
-print("Longitude range: {:.2f} to {:.2f}".format(lon.min(), lon.max()))
-print("Longitude range: {:.2f} to {:.2f}".format(lon.min()-360.0, lon.max()-360.0))
-print("Latitude range: {:.2f} to {:.2f}".format(lat.min(), lat.max()))
+lon_dmin, lon_dmax = lon.min(), lon.max()
+lat_dmin, lat_dmax = lat.min(), lat.max()
 
-print('\n#Step 3: Read ASCII ./points.dat File with Projected Coordinates')
-# Call reader
-projected_points = read_points('./points.dat')
+print("\nDEM bounds (lon/lat):")
+print(f"  lon: {lon_dmin:.4f} to {lon_dmax:.4f}")
+print(f"  lat: {lat_dmin:.4f} to {lat_dmax:.4f}")
 
-# Convert to NumPy array
-projected_points = np.array(projected_points)  # shape (N, 2)
-xv = projected_points[:, 0]
-yv = projected_points[:, 1]
+print('\n# Step 2: Load Query Points (Projected EPSG:3338)')
+projected_points = np.array(read_points('./points.dat'))
+xv, yv = projected_points[:, 0], projected_points[:, 1]
 
-# Print summary
-print(f"\nLoaded {len(projected_points)} projected points from file points.dat.")
+print(f"Loaded {len(projected_points)} projected points.")
+print(f"  X range: {xv.min():.2f} to {xv.max():.2f}")
+print(f"  Y range: {yv.min():.2f} to {yv.max():.2f}")
 
-# Print value ranges
-print("X projected range: {:.2f} to {:.2f}".format(xv.min(), xv.max()))
-print("Y projected range: {:.2f} to {:.2f}".format(yv.min(), yv.max()))
-
-print('\n#Step 4: Reproject EPSG:3338 (x, y) → EPSG:4326 (lon, lat)')
-# EPSG:3338 (input) → EPSG:4326 (output)
+print('\n# Step 3: Reproject Query Points EPSG:3338 → EPSG:4326')
 transformer = Transformer.from_crs("EPSG:3338", "EPSG:4326", always_xy=True)
-
-# Transform all projected (x, y) points to (lon, lat)
 lon_query, lat_query = transformer.transform(xv, yv)
 
-# Check Range
-print("\nTransformed coordinate bounds:")
-print(f"  Longitude: {lon_query.min():.4f} to {lon_query.max():.4f}")
-print(f"  Latitude:  {lat_query.min():.4f} to {lat_query.max():.4f}")
+lon_qmin, lon_qmax = lon_query.min(), lon_query.max()
+lat_qmin, lat_qmax = lat_query.min(), lat_query.max()
 
-print('\n# Step 4: Project NetCDF grid corners EPSG:4326 → EPSG:3338')
-transformer_to_proj = Transformer.from_crs("EPSG:4326", "EPSG:3338", always_xy=True)
+print("\nQuery bounds (lon/lat):")
+print(f"  lon: {lon_qmin:.4f} to {lon_qmax:.4f}")
+print(f"  lat: {lat_qmin:.4f} to {lat_qmax:.4f}")
 
-# Extract 4 corners
-lon_corners = [lon[0,0], lon[0,-1], lon[-1,0], lon[-1,-1]]
-lat_corners = [lat[0,0], lat[0,-1], lat[-1,0], lat[-1,-1]]
+# --- Compare coverage ---
+outside = (
+    lon_qmin < lon_dmin or lon_qmax > lon_dmax or
+    lat_qmin < lat_dmin or lat_qmax > lat_dmax
+)
 
-# Forward projection
-x_corners, y_corners = transformer_to_proj.transform(lon_corners, lat_corners)
-xylon, xylat = transformer_to_proj.transform(lon, lat)
-# Compute projected coordinate bounds
-x_min, x_max = np.min(x_corners), np.max(x_corners)
-y_min, y_max = np.min(y_corners), np.max(y_corners)
+if outside:
+    print("\n⚠️  Query domain exceeds DEM coverage. Expanding DEM subset...")
+    pad = 0.2  # degrees of safety padding
 
-print("\nProjected grid coordinate bounds (corners only):")
-print(f"  X range: {x_min:.2f} to {x_max:.2f}")
-print(f"  Y range: {y_min:.2f} to {y_max:.2f}")
+    lon_min_new = min(lon_dmin, lon_qmin) - pad
+    lon_max_new = max(lon_dmax, lon_qmax) + pad
+    lat_min_new = min(lat_dmin, lat_qmin) - pad
+    lat_max_new = max(lat_dmax, lat_qmax) + pad
 
-#print("\n now use Longitude in -180,180")
-## Extract corners as arrays
-#lon_corners = np.array([lon[0,0], lon[0,-1], lon[-1,0], lon[-1,-1]])
-#lat_corners = np.array([lat[0,0], lat[0,-1], lat[-1,0], lat[-1,-1]])
-#
-## Normalize longitudes from 0–360 to -180–180
-#lon_corners = np.where(lon_corners > 180, lon_corners - 360, lon_corners)
-#
-## Forward projection
-#x_corners, y_corners = transformer_to_proj.transform(lon_corners, lat_corners)
-#
-## Compute projected coordinate bounds
-#x_min, x_max = np.min(x_corners), np.max(x_corners)
-#y_min, y_max = np.min(y_corners), np.max(y_corners)
-#
-#print("\nProjected grid coordinate bounds (corners only):")
-#print(f"  X range: {x_min:.2f} to {x_max:.2f}")
-#print(f"  Y range: {y_min:.2f} to {y_max:.2f}")
+    lon_min_new = wrap_longitudes(lon_min_new, mode='180')
+    lon_max_new = wrap_longitudes(lon_max_new, mode='180')
 
-import matplotlib.pyplot as plt
+    print(f"Expanded DEM bounds:")
+    print(f"  lon: {lon_min_new:.4f} to {lon_max_new:.4f}")
+    print(f"  lat: {lat_min_new:.4f} to {lat_max_new:.4f}")
 
-plt.figure(figsize=(8,6))
-plt.scatter(xylon, xylat, s=1, label='source')
-plt.scatter(xv, yv, s=1, label='query', alpha=0.5)
-plt.legend()
-plt.xlabel("X (EPSG:3338)")
-plt.ylabel("Y (EPSG:3338)")
-plt.title("Source vs Query Points")
-plt.tight_layout()
+    lon_min_new = wrap_longitudes(lon_min_new, mode='360')
+    lon_max_new = wrap_longitudes(lon_max_new, mode='360')
 
-# Save as PNG
-plt.savefig("source_vs_query.png", dpi=300)
+    print(f"Expanded DEM bounds:")
+    print(f"  lon: {lon_min_new:.4f} to {lon_max_new:.4f}")
+    print(f"  lat: {lat_min_new:.4f} to {lat_max_new:.4f}")
 
-if (lat_query.min() < lat.min() or lat_query.max() > lat.max() or
-    lon_query.min() < lon.min() or lon_query.max() > lon.max()):
-    print("")
-    print("⚠️  Warning: Query domain exceeds DEM coverage. Consider expanding DEM subset.")
-    # add method to programatically extract bbox4
-    #need environment with ncks
-    #ncks -d lon,-143.0,-126.0 -d lat,48.0,60.0 GEBCO_2022_deflate.nc -O nc_file
+    expanded_nc = f"{os.path.splitext(nc_file)[0]}_expanded.nc"
+
+#    cmd = [
+#        "ncks",
+#        "-d", f"lon,{lon_min_new},{lon_max_new}",
+#        "-d", f"lat,{lat_min_new},{lat_max_new}",
+#        nc_file,
+#        "-O", expanded_nc
+#    ]
+#    print("Running:", " ".join(cmd))
+#    try:
+#        subprocess.run(cmd, check=True)
+#        print(f"✅ Expanded DEM written to {expanded_nc}")
+#        nc_file = expanded_nc
+#    except subprocess.CalledProcessError as e:
+#        print(f"❌ ncks failed: {e}")
+#        sys.exit(1)
 else:
     print("✅ Query domain fully covered by DEM.")
 
-sys.exit()
+print('\n# Step 4: Project DEM grid to EPSG:3338 (for visualization)')
+transformer_to_proj = Transformer.from_crs("EPSG:4326", "EPSG:3338", always_xy=True)
 
-print('\n#Step 5: Interpolate Elevation at (lat, lon)')
+# Reproject DEM lat/lon grid (sample or full, depending on size)
+if lon.ndim == 2:
+    xylon, xylat = transformer_to_proj.transform(lon, lat)
+else:
+    Lon, Lat = np.meshgrid(lon, lat)
+    xylon, xylat = transformer_to_proj.transform(Lon, Lat)
 
-# Stack into shape (N, 2) — required by interp_func
-query_points = np.column_stack((lat_query, lon_query))  # shape: (N, 2)
-
-# Interpolate elevation at each (lat, lon) point
-elev_interp = interp_func(query_points)  # returns array of shape (N,)
-
-# Convention: depth is positive downward → depth = -elevation
-depth = -elev_interp
-
-# Print sample Output
-print("\n--- Sample Depth Results ---")
-for i in range(min(5, len(depth))):
-    print(f"  x: {x_proj[i]:.2f}, y: {y_proj[i]:.2f}, depth: {depth[i]:.2f} m")
-
-print('\n#Step 6: Write Output File (x,y,depth)')
-
-output = np.column_stack((x_proj, y_proj, depth))
-
-# Save to ASCII file
-np.savetxt(output_file, output, fmt="%.3f", comments="")
-
-# Confirm to user
-print(f"Output file '{output_file}' written successfully.")
-
-#Diagnose before fixing
-# Identify NaN locations
-mask_nan = np.isnan(depth)
-frac_nan = np.mean(mask_nan)
-#print(f"Fraction NaN: {np.mean(mask_nan):.2%}")
-print(f"Fraction of NaN depth values: {frac_nan:.2%}")
-
-import matplotlib.pyplot as plt
-
-#plt.scatter(x_proj[mask_nan], y_proj[mask_nan], c='r', s=5, label='NaN points')
-#plt.scatter(x_proj[~mask_nan], y_proj[~mask_nan], c='k', s=1, label='Valid')
-#plt.legend()
-#plt.title("NaN distribution in projected coordinates")
-#plt.show()
-
-# Create scatter plot of NaN vs valid points
 plt.figure(figsize=(8, 6))
-plt.scatter(x_proj[~mask_nan], y_proj[~mask_nan],
-            c='k', s=2, label='Valid')
-plt.scatter(x_proj[mask_nan], y_proj[mask_nan],
-            c='r', s=6, label='NaN')
-plt.xlabel("x (m, EPSG:3338)")
-plt.ylabel("y (m, EPSG:3338)")
-#plt.title(f"NaN Distribution in Depth Field ({frac_nan:.2%} NaN)")
-plt.title(f"NaN Distribution in Depth Field ({frac_nan:.2%})\nSource: {nc_basename}")
-plt.legend(markerscale=3)
-plt.axis('equal')
+plt.scatter(xylon, xylat, s=1, label='source DEM')
+plt.scatter(xv, yv, s=1, label='query points', alpha=0.5)
+plt.legend()
+plt.xlabel("X (EPSG:3338)")
+plt.ylabel("Y (EPSG:3338)")
+plt.title("Source vs Query Coverage Check")
 plt.tight_layout()
-
-# Save plot as PNG
-png_name = f"nan_depth_distribution_{nc_basename}.png"
-plt.savefig(png_name, dpi=300)
+plt.savefig(f"source_vs_query_{nc_basename}.png", dpi=300)
 plt.close()
+print(f"Saved coverage diagnostic: source_vs_query_{nc_basename}.png")
 
-print(f"Saved NaN diagnostic plot: {png_name}")
+# You can later continue with interpolation logic here...
+sys.exit(0)
+
+# Apply to your longitude coordinate column before UTM conversion:
+#lon_checked = wrap_longitudes(lon_checked)
+#coords_to_use[:, 1] = lon_checked
+
+
